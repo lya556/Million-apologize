@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<title>Math Heart FX</title>
+
+<style>
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #000010;
+        font-family: "Tajawal", sans-serif;
+    }
+
+    /* شبكة التربيع */
+    .grid {
+        position: fixed;
+        inset: 0;
+        background:
+            linear-gradient(#ffffff20 2px, transparent 2px) 0 0 / 35px 35px,
+            linear-gradient(90deg, #ffffff20 2px, transparent 2px) 0 0 / 35px 35px;
+        opacity: 0.9;
+        animation: gridGlow 3s infinite alternate;
+    }
+    @keyframes gridGlow {
+        from { opacity: 0.6; }
+        to { opacity: 1; }
+    }
+
+    canvas {
+        position: fixed;
+        inset: 0;
+    }
+
+    /* الرسالة */
+    #finalText {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 85%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        font-size: 22px;
+        line-height: 1.7;
+        color: #ff99b3;
+        opacity: 0;
+        filter: drop-shadow(0 0 10px #ff99b3);
+        animation: fadeIn 3s forwards;
+        animation-delay: 3s;
+        pointer-events: none;
+    }
+
+    #names {
+        font-size: 19px;
+        margin-top: 20px;
+        opacity: 0;
+        animation: fadeIn 3s forwards;
+        animation-delay: 4.5s;
+    }
+
+    @keyframes fadeIn {
+        to { opacity: 1; }
+    }
+
+</style>
+</head>
+
+<body>
+
+<div class="grid"></div>
+<canvas id="heartCanvas"></canvas>
+
+<div id="finalText">
+    نعتذر بلسان الرياضيات: مجموع أسفنا أكبر من اللانهاية،  
+    وحاصل ضرب ندمنا لا يحويه أي متغير  
+    نرجوكِ قبل أن تحكمي على خطئنا،  
+    أن تفتحي لنا دفتر مسامحتكِ وألا تضعي عليه علامة الغياب.
+    <div id="names">علياء خليفة × حلى فارسي</div>
+</div>
+
+<script>
+/* إعداد الكانفاس */
+const canvas = document.getElementById("heartCanvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
+
+/* معادلة القلب */
+function heartFunc(t, size) {
+    const x = size * 16 * Math.pow(Math.sin(t), 3);
+    const y = -size * (
+        13 * Math.cos(t)
+        - 5 * Math.cos(2*t)
+        - 2 * Math.cos(3*t)
+        - Math.cos(4*t)
+    );
+    return { x, y };
+}
+
+function getHeartSize() {
+    return Math.min(canvas.width, canvas.height) / 35;
+}
+
+let progress = 0;
+let waves = [];
+let heartDone = false;
+
+let waveShift = 0;
+
+/* رسم */
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2 + 10;
+    const size = getHeartSize();
+
+    /* نحدد مسار القلب */
+    ctx.beginPath();
+    let path = new Path2D();
+    for (let t = 0; t < Math.PI * 2; t += 0.01) {
+        const p = heartFunc(t, size);
+        if (t === 0) path.moveTo(cx + p.x, cy + p.y);
+        else path.lineTo(cx + p.x, cy + p.y);
+    }
+
+    /* تعبئة القلب بموجات */
+    if (heartDone) {
+        ctx.save();
+        ctx.clip(path);
+
+        waveShift += 0.06;
+        for (let y = 0; y < canvas.height; y += 10) {
+            ctx.strokeStyle = `rgba(255,77,115,0.25)`;
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x += 5) {
+                const waveY = Math.sin((x * 0.03) + waveShift + y * 0.02) * 10;
+                ctx.lineTo(x, cy + waveY - (y * 0.03));
+            }
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    /* رسم خط القلب أثناء الكتابة */
+    ctx.beginPath();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#ff4d73";
+    for (let t = 0; t < progress; t += 0.01) {
+        const p = heartFunc(t, size);
+        if (t === 0) ctx.moveTo(cx + p.x, cy + p.y);
+        else ctx.lineTo(cx + p.x, cy + p.y);
+    }
+    ctx.stroke();
+
+    /* عند اكتماله */
+    if (progress >= Math.PI * 2 && !heartDone) {
+        heartDone = true;
+
+        for (let i = 0; i < 30; i++) {
+            waves.push({ r: i * 25, alpha: 0.7 });
+        }
+    }
+
+    /* موجات خارجية */
+    waves.forEach((w, i) => {
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(255, 77, 115, ${w.alpha})`;
+        ctx.lineWidth = 3;
+
+        ctx.ellipse(cx, cy, w.r * 2, w.r, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        w.r += 3;
+        w.alpha -= 0.006;
+
+        if (w.alpha <= 0) waves.splice(i, 1);
+    });
+}
+
+/* الحركة */
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (progress < Math.PI * 2) {
+        progress += 0.05;
+    }
+
+    draw();
+}
+
+animate();
+</script>
+
+</body>
+  </html>
